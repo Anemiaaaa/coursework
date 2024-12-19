@@ -35,14 +35,45 @@ class Application(Frame):
     def setup_window(self):
         self.frame.configure(bg="#C4E0A6")
 
+    import subprocess
+    import tkinter as tk
+
     def open_RashodCategory_window(self):
+        # Get the screen width and height
+        screen_width = self.frame.winfo_screenwidth()
+        screen_height = self.frame.winfo_screenheight()
+
+        # Set the window size (modify based on the size of your window)
+        window_width = 800  # Example width of the RashodCategory window
+        window_height = 600  # Example height of the RashodCategory window
+
+        # Calculate the position to center the window
+        x = (screen_width // 2) - (window_width // 2)
+        y = (screen_height // 2) - (window_height // 2)
+
+        # Pass the center position to the script
         subprocess.Popen(
-            ["python", r"C:\\Users\\amiri\\PycharmProjects\\kursach\\экраны\\RashodCategory.py", self.logged_in_user]
+            ["python", r"C:\\Users\\amiri\\PycharmProjects\\kursach\\экраны\\RashodCategory.py", self.logged_in_user,
+             str(x), str(y)]
         )
 
     def open_DohodCategory_window(self):
+        # Get the screen width and height
+        screen_width = self.frame.winfo_screenwidth()
+        screen_height = self.frame.winfo_screenheight()
+
+        # Set the window size (modify based on the size of your window)
+        window_width = 800  # Example width of the DohodCategory window
+        window_height = 600  # Example height of the DohodCategory window
+
+        # Calculate the position to center the window
+        x = (screen_width // 2) - (window_width // 2)
+        y = (screen_height // 2) - (window_height // 2)
+
+        # Pass the center position to the script
         subprocess.Popen(
-            ["python", r"C:\\Users\\amiri\\PycharmProjects\\kursach\\экраны\\DohodCategory.py", self.logged_in_user]
+            ["python", r"C:\\Users\\amiri\\PycharmProjects\\kursach\\экраны\\DohodCategory.py", self.logged_in_user,
+             str(x), str(y)]
         )
 
     def setup_canvas(self):
@@ -166,9 +197,21 @@ class Application(Frame):
             print(f"Error while populating categories: {e}")
 
     def update_balance_entry(self):
+        # Get the balance from the user
+        balance = self.get_balance_from_user(self.logged_in_user)
+
+        # Enable the entry widget to modify it
         self.entry_1.config(state='normal')
         self.entry_1.delete(0, 'end')
-        self.entry_1.insert(0, str(self.get_balance_from_user(self.logged_in_user)))
+        self.entry_1.insert(0, str(balance))
+
+        # If balance is less than 100, set the text color to red, else default color
+        if balance < 100:
+            self.entry_1.config(fg='red')  # Set text color to red
+        else:
+            self.entry_1.config(fg='black')  # Set text color to default (black)
+
+        # Make the entry widget readonly again
         self.entry_1.config(state='readonly', readonlybackground="#74C38C")
 
 

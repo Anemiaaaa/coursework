@@ -40,7 +40,7 @@ def add_transaction(amount, description):
     try:
         amount = float(amount)  # Convert amount to float
 
-        # Connect to the database (replace with your database path if necessary)
+        # Connect to the database
         conn = sqlite3.connect('cointracker.db')
         cursor = conn.cursor()
 
@@ -49,6 +49,21 @@ def add_transaction(amount, description):
         cursor.execute('SELECT id FROM Users WHERE username = ?', (logged_in_user,))
         user_id = cursor.fetchone()
 
+        if user_id is None:
+            messagebox.showerror("Ошибка", "Пользователь не найден!")
+            conn.close()
+            return
+
+        # Fetch current balance for the user
+        cursor.execute('SELECT balance FROM Users WHERE id = ?', (user_id[0],))
+        balance = cursor.fetchone()
+
+        if balance is None:
+            messagebox.showerror("Ошибка", "Не удалось получить баланс пользователя.")
+            conn.close()
+            return
+
+        balance = balance[0]  # Current balance
 
         # Debug print to check the values being passed
         print(
@@ -61,11 +76,13 @@ def add_transaction(amount, description):
             """, (user_id[0], int(category), None, amount, "Income", date, description))
 
         if Type == "Expense":
-            # Check if Expense category
-            cursor.execute(""" 
-                INSERT INTO Transactions (UserID, IncomeCategoryID, ExpenseCategoryID, Amount, Type, Date, Description)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-            """, (user_id[0], None, int(category), amount, "Expense", date, description))
+            if amount > balance:  # Check if the expense amount is greater than the current balance
+                messagebox.showerror("Ошибка", "Недостаточно средств на счете для выполнения расхода!")
+            else:
+                cursor.execute(""" 
+                    INSERT INTO Transactions (UserID, IncomeCategoryID, ExpenseCategoryID, Amount, Type, Date, Description)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                """, (user_id[0], None, int(category), amount, "Expense", date, description))
 
         conn.commit()
 

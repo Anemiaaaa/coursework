@@ -5,6 +5,7 @@ from tkinter import Frame, Canvas, PhotoImage, StringVar, Label, Button
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from datetime import datetime
 from calendar import month_name
+from dateutil.relativedelta import relativedelta
 
 
 class RashodPustoi(Frame):
@@ -64,22 +65,12 @@ class RashodPustoi(Frame):
         user_id = cursor.fetchone()
 
         # Получаем данные по транзакциям для текущего пользователя
-        target_month = self.current_date.month - self.month_offset
-        target_year = self.current_date.year
+        target_date = self.current_date.replace(day=1) + relativedelta(months=self.month_offset)
+        start_date = target_date
+        end_date = (target_date + relativedelta(months=1)).replace(day=1)
 
-        # Корректируем месяц и год для правильной фильтрации
-        if target_month < 1:
-            target_month += 12
-            target_year -= 1
-        elif target_month > 12:
-            target_month -= 12
-            target_year += 1
-
-        start_date = datetime(target_year, target_month, 1)
-        if target_month == 12:
-            end_date = datetime(target_year + 1, 1, 1)
-        else:
-            end_date = datetime(target_year, target_month + 1, 1)
+        # Отладочные сообщения
+        print(f"Start Date: {start_date}, End Date: {end_date}")
 
         query = '''
         SELECT Date, Type, Amount, Description, IncomeCategoryID
@@ -88,6 +79,9 @@ class RashodPustoi(Frame):
         '''
         cursor.execute(query, (user_id[0], start_date, end_date))
         transactions = cursor.fetchall()
+
+        # Отладочное сообщение
+        print(f"Transactions: {transactions}")
 
         # Получаем названия категорий доходов
         income_categories = {}
@@ -109,7 +103,7 @@ class RashodPustoi(Frame):
 
         # Если данных нет, возвращаем пустые значения
         if not income_sums:
-            return [], [], income_categories
+            print("Нет данных по доходам для выбранного месяца.")
 
         # Создаем список для графика
         labels = [income_categories[cat_id] for cat_id in income_sums]
@@ -173,26 +167,19 @@ class RashodPustoi(Frame):
 
             y_offset += 35  # Увеличиваем отступ по Y для следующей строки
 
-
     def get_month_name(self):
         """Получение названия месяца для текущего отображаемого месяца"""
-        month_num = (self.current_date.month - 1 + self.month_offset) % 12 + 1
-        return f"{month_name[month_num]} {self.current_date.year}"
+        target_date = self.current_date.replace(day=1) + relativedelta(months=self.month_offset)
+        return f"{month_name[target_date.month]} {target_date.year}"
 
     def show_previous_month(self):
         """Переключение на предыдущий месяц"""
         self.month_offset -= 1
-        # Корректируем год, если месяц становится декабрем
-        if (self.current_date.month - 1 + self.month_offset) % 12 + 1 == 12:
-            self.current_date = self.current_date.replace(year=self.current_date.year - 1)
         self.update_graph()
 
     def show_next_month(self):
         """Переключение на следующий месяц"""
         self.month_offset += 1
-        # Корректируем год, если месяц становится январем
-        if (self.current_date.month - 1 + self.month_offset) % 12 + 1 == 1:
-            self.current_date = self.current_date.replace(year=self.current_date.year + 1)
         self.update_graph()
 
     def update_graph(self):
@@ -230,3 +217,5 @@ class RashodPustoi(Frame):
 
             # Обновляем текстовую метку
             self.month_label.config(text=f"{self.get_month_name()} \n (Нет данных)")
+
+

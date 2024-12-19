@@ -1,7 +1,12 @@
 import sqlite3
-from tkinter import Tk, Canvas, Entry, Button, PhotoImage, Frame, messagebox
+from tkinter import Tk, Canvas, Entry, Button, PhotoImage, Frame, messagebox, Listbox, Label, END, Toplevel, CENTER
 from pathlib import Path
 import subprocess
+from openpyxl import Workbook
+from tkinter import filedialog
+from tkcalendar import DateEntry
+from openpyxl import Workbook
+from datetime import datetime
 
 
 class Settings(Frame):
@@ -55,17 +60,21 @@ class Settings(Frame):
         )
         self.button_3.place(x=427.0, y=267.0, width=190.0, height=58.0)
 
-        # Кнопка для удаления всех транзакций
-        self.button_image_2 = PhotoImage(file=self.relative_to_assets("button_2.png"))
-        self.button_2 = Button(
+        self.button_image_4 = PhotoImage(file=self.relative_to_assets("button_6.png"))
+        self.button_4 = Button(
             self.parent_frame,
-            image=self.button_image_2,
+            image=self.button_image_4,
             borderwidth=0,
             highlightthickness=0,
-            command=self.delete_all_transactions,
+            command=self.export_to_excel,
             relief="flat"
         )
-        self.button_2.place(x=72.0, y=493.0, width=299.0, height=79.0)
+        self.button_4.place(
+            x=522.0,
+            y=504.0,
+            width=228.0,
+            height=60.24080276489258
+        )
 
         # Кнопка для удаления пользователя
         self.button_image_1 = PhotoImage(file=self.relative_to_assets("button_1.png"))
@@ -77,23 +86,46 @@ class Settings(Frame):
             command=self.delete_user,
             relief="flat"
         )
-        self.button_1.place(x=389.0, y=493.0, width=299.0, height=79.0)
+        self.button_1.place(
+            x=273.0,
+            y=504.0,
+            width=228.0,
+            height=60.24080276489258
+        )
 
-        self.button_image_4 = PhotoImage(file=self.relative_to_assets("button_4.png"))
-        self.button_4 = Button(
+        self.button_image_2 = PhotoImage(file=self.relative_to_assets("button_4.png"))
+        self.button_2 = Button(
             self.parent_frame,
-            image=self.button_image_4,
+            image=self.button_image_2,
             borderwidth=0,
             highlightthickness=0,
             command=self.open_authorization_window,
             relief="flat"
         )
-        self.button_4.place(
+        self.button_2.place(
             x=522.0,
             y=38.0,
             width=187.0,
             height=62.33333206176758
         )
+
+        # Кнопка для удаления всех транзакций
+        self.button_image_5 = PhotoImage(file=self.relative_to_assets("button_5.png"))
+        self.button_5 = Button(
+            self.parent_frame,
+            image=self.button_image_5,
+            borderwidth=0,
+            highlightthickness=0,
+            command=self.delete_all_transactions,
+            relief="flat"
+        )
+        self.button_5.place(
+            x=24.0,
+            y=504.0,
+            width=228.0,
+            height=60.24080276489258
+        )
+
 
 
 
@@ -117,6 +149,114 @@ class Settings(Frame):
 
 
         self.parent_frame.update()  # Обновляем родительский фрейм для отображения всех элементов
+
+    def export_to_excel(self):
+        """Открывает окно для выбора диапазона дат и экспортирует данные из базы данных в Excel."""
+        def open_date_range_window():
+            """Открывает окно для выбора начальной и конечной дат."""
+            date_window = Toplevel()
+            date_window.title("Выбор диапазона дат")
+            date_window.geometry("300x250")
+            date_window.resizable(False, False)
+            date_window.configure(bg="#C4E0A6")
+
+            # Центрируем окно на экране
+            date_window.update_idletasks()
+            x = (date_window.winfo_screenwidth() // 2) - (300 // 2)
+            y = (date_window.winfo_screenheight() // 2) - (250 // 2)
+            date_window.geometry(f"+{x}+{y}")
+
+
+            Label(date_window, text="Выберите диапазон дат", font=("Arial", 12, "bold"), anchor=CENTER, bg="#C4E0A6").pack(pady=10)
+
+            Label(date_window, text="Начальная дата:", font=("Arial", 10), bg="#C4E0A6").pack(pady=5)
+            start_date_entry = DateEntry(date_window, width=12, background='darkblue', foreground='white', borderwidth=2)
+            start_date_entry.pack(pady=5)
+
+            Label(date_window, text="Конечная дата:", font=("Arial", 10), bg="#C4E0A6").pack(pady=5)
+            end_date_entry = DateEntry(date_window, width=12, background='darkblue', foreground='white', borderwidth=2)
+            end_date_entry.pack(pady=5)
+
+            def confirm_dates():
+                # Получаем даты из виджетов
+                start_date = datetime.strptime(start_date_entry.get(), "%m/%d/%y").strftime("%Y-%m-%d")
+                end_date = datetime.strptime(end_date_entry.get(), "%m/%d/%y").strftime("%Y-%m-%d")
+                date_window.destroy()
+                perform_export(start_date, end_date)
+
+            confirm_button = Button(date_window, text="Экспортировать", command=confirm_dates, bg="green", fg="white", font=("Arial", 10, "bold"))
+            confirm_button.place(relx=0.5, rely=0.9, anchor=CENTER)
+
+            def confirm_dates():
+                # Получаем даты из виджетов
+                start_date = datetime.strptime(start_date_entry.get(), "%m/%d/%y").strftime("%Y-%m-%d")
+                end_date = datetime.strptime(end_date_entry.get(), "%m/%d/%y").strftime("%Y-%m-%d")
+                date_window.destroy()
+                perform_export(start_date, end_date)
+
+            confirm_button = Button(date_window, text="Экспортировать", command=confirm_dates, bg="green", fg="white", font=("Arial", 10, "bold"))
+            confirm_button.place(relx=0.5, rely=0.9, anchor=CENTER)
+
+        def perform_export(start_date, end_date):
+            try:
+                # Открываем диалоговое окно для выбора пути сохранения файла
+                file_path = filedialog.asksaveasfilename(
+                    defaultextension=".xlsx",
+                    filetypes=[("Excel Files", "*.xlsx"), ("All Files", "*.*")],
+                    title="Сохранить файл как"
+                )
+
+                if not file_path:  # Если пользователь закрыл окно, не выбирая файл
+                    return
+
+                conn = sqlite3.connect(self.dbpath)
+                cursor = conn.cursor()
+
+                # Преобразуем даты в нужный формат для SQL-запроса
+                cursor.execute('''
+                    SELECT t.TransactionID, t.UserID, t.Amount, t.Type, t.Date, t.Description,
+                           ic.name AS IncomeCategory, ec.name AS ExpenseCategory
+                    FROM Transactions t
+                    LEFT JOIN IncomeCategories ic ON t.IncomeCategoryID = ic.id
+                    LEFT JOIN ExpenseCategories ec ON t.ExpenseCategoryID = ec.id
+                    WHERE t.UserID = (SELECT id FROM Users WHERE username = ?)
+                      AND SUBSTR(t.Date, 1, 10) >= ?
+                      AND SUBSTR(t.Date, 1, 10) <= ?
+                ''', (self.username, start_date, end_date))
+                transactions = cursor.fetchall()
+
+                # Диагностика: вывод количества транзакций в консоль
+                print(f"Найдено {len(transactions)} транзакций в диапазоне {start_date} - {end_date}")
+
+                if not transactions:
+                    messagebox.showinfo("Информация", "За выбранный период транзакций не найдено.")
+                    conn.close()
+                    return
+
+                # Создаем новый Excel-файл
+                wb = Workbook()
+                ws = wb.active
+                ws.title = "Транзакции"
+
+                # Добавляем заголовки
+                headers = ["TransactionID", "UserID", "Amount", "Type", "Date", "Description", "IncomeCategory",
+                           "ExpenseCategory"]
+                ws.append(headers)
+
+                # Добавляем данные
+                for transaction in transactions:
+                    ws.append(transaction)
+
+                # Сохраняем файл
+                wb.save(file_path)
+                conn.close()
+
+                messagebox.showinfo("Успех", f"Данные успешно экспортированы в {file_path}")
+            except Exception as e:
+                messagebox.showerror("Ошибка", f"Не удалось экспортировать данные: {e}")
+
+        open_date_range_window()
+
 
     def change_password(self):
         """Изменяет пароль пользователя."""
@@ -206,6 +346,5 @@ class Settings(Frame):
     def open_authorization_window(self):
         """Закрывает текущее окно и открывает окно авторизации."""
         self.parent_frame.master.destroy()  # Удаляем основное окно
-
         # Запускаем окно авторизации (например, subprocess для авторизационного окна)
         subprocess.Popen(["python", "autorizacia.py"])  # Замените на путь к вашему файлу авторизации

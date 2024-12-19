@@ -5,6 +5,7 @@ from tkinter import Frame, Canvas, PhotoImage, StringVar, Label, Button
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from datetime import datetime
 from calendar import month_name
+from dateutil.relativedelta import relativedelta
 
 
 class DohodPustoi(Frame):
@@ -58,29 +59,19 @@ class DohodPustoi(Frame):
             self.create_text_lines()
 
     def generate_data_from_db(self):
-        """Получение данных из базы данных для графика (расходы)"""
+        """Получение данных из базы данных для графика (доходы)"""
         conn = sqlite3.connect('C:\\Users\\amiri\\PycharmProjects\\kursach\\экраны\\cointracker.db')
         cursor = conn.cursor()
         cursor.execute('SELECT id FROM Users WHERE username = ?', (self.logged_in_user,))
         user_id = cursor.fetchone()
 
         # Получаем данные по транзакциям для текущего пользователя
-        target_month = self.current_date.month - self.month_offset
-        target_year = self.current_date.year
+        target_date = self.current_date.replace(day=1) + relativedelta(months=self.month_offset)
+        start_date = target_date
+        end_date = (target_date + relativedelta(months=1)).replace(day=1)
 
-        # Корректируем месяц и год для правильной фильтрации
-        if target_month < 1:
-            target_month += 12
-            target_year -= 1
-        elif target_month > 12:
-            target_month -= 12
-            target_year += 1
-
-        start_date = datetime(target_year, target_month, 1)
-        if target_month == 12:
-            end_date = datetime(target_year + 1, 1, 1)
-        else:
-            end_date = datetime(target_year, target_month + 1, 1)
+        # Отладочные сообщения
+        print(f"Start Date: {start_date}, End Date: {end_date}")
 
         query = '''
         SELECT Date, Type, Amount, Description, ExpenseCategoryID
@@ -90,27 +81,31 @@ class DohodPustoi(Frame):
         cursor.execute(query, (user_id[0], start_date, end_date))
         transactions = cursor.fetchall()
 
-        # Получаем названия категорий расходов
+        # Отладочное сообщение
+        print(f"Transactions: {transactions}")
+
+        # Получаем названия категорий доходов
         expense_categories = {}
         cursor.execute('SELECT id, name FROM ExpenseCategories')
         for row in cursor.fetchall():
             expense_categories[row[0]] = row[1]
 
-        # Подсчитываем суммы расходов по категориям
+        # Подсчитываем суммы доходов по категориям
         expense_sums = {}
         expense_counts = {}
         for transaction in transactions:
             category_id = transaction[4]
             amount = transaction[2]
-            if category_id not in expense_sums:
-                expense_sums[category_id] = 0
-                expense_counts[category_id] = 0
-            expense_sums[category_id] += amount
-            expense_counts[category_id] += 1
+            if category_id is not None:  # Проверка на None
+                if category_id not in expense_sums:
+                    expense_sums[category_id] = 0
+                    expense_counts[category_id] = 0
+                expense_sums[category_id] += amount
+                expense_counts[category_id] += 1
 
         # Если данных нет, возвращаем пустые значения
         if not expense_sums:
-            return [], [], expense_categories
+            print("Нет данных по доходам для выбранного месяца.")
 
         # Создаем список для графика
         labels = [expense_categories[cat_id] for cat_id in expense_sums]
@@ -177,23 +172,17 @@ class DohodPustoi(Frame):
 
     def get_month_name(self):
         """Получение названия месяца для текущего отображаемого месяца"""
-        month_num = (self.current_date.month - 1 + self.month_offset) % 12 + 1
-        return f"{month_name[month_num]} {self.current_date.year}"
+        target_date = self.current_date.replace(day=1) + relativedelta(months=self.month_offset)
+        return f"{month_name[target_date.month]} {target_date.year}"
 
     def show_previous_month(self):
         """Переключение на предыдущий месяц"""
         self.month_offset -= 1
-        # Корректируем год, если месяц становится декабрем
-        if (self.current_date.month - 1 + self.month_offset) % 12 + 1 == 12:
-            self.current_date = self.current_date.replace(year=self.current_date.year - 1)
         self.update_graph()
 
     def show_next_month(self):
         """Переключение на следующий месяц"""
         self.month_offset += 1
-        # Корректируем год, если месяц становится январем
-        if (self.current_date.month - 1 + self.month_offset) % 12 + 1 == 1:
-            self.current_date = self.current_date.replace(year=self.current_date.year + 1)
         self.update_graph()
 
     def update_graph(self):
@@ -209,14 +198,14 @@ class DohodPustoi(Frame):
                 widget.destroy()
 
         # Проверяем, есть ли данные для отображения
-        if self.data[0]:  # Если есть данные для расходов
+        if self.data[0]:  # Если есть данные для доходов
             # Создаем новый график
             self.create_graph()
 
             # Обновляем надпись с месяцем
             self.month_label.config(text=self.get_month_name())
 
-            # Создаем текстовые метки для категорий расходов
+            # Создаем текстовые метки для категорий доходов
             self.create_text_lines()
         else:
             # Если данных нет, показываем только сообщение "Нет данных"
