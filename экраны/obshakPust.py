@@ -288,8 +288,11 @@ class Obshiy(Frame):
                     continue
 
                 if self.period.get() == "day":
-                    # Для периода "день" используем время транзакции как ключ
-                    time_label = time_str.split()[1]  # Извлекаем время из datetime
+                    # Для "дня" используем только часы и минуты
+                    time_label = time_str.split()[1][:5]  # Формат HH:MM
+                elif self.period.get() == "year":
+                    # Для "года" используем только день и месяц
+                    time_label = time_str.split()[0][5:10].replace("-", ".")  # Формат DD.MM
                 else:
                     time_label = time_str
 
